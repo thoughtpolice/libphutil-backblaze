@@ -5,21 +5,13 @@
  */
 final class BackblazeB2 {
 
-  private $bucketId;
   private $bucketName;
   private $accountId;
   private $applicationKey;
 
+/* -------------------------------------------------------------------------- */
 /* -(  Accessors  )---------------------------------------------------------- */
-
-  public function setBucketId($bucket_id) {
-    $this->bucketId = $bucket_id;
-    return $this;
-  }
-
-  public function getBucketId() {
-    return $this->bucketId;
-  }
+/* -------------------------------------------------------------------------- */
 
   public function setBucketName($bucket_name) {
     $this->bucketName = $bucket_name;
@@ -48,7 +40,9 @@ final class BackblazeB2 {
     return $this->applicationKey;
   }
 
+/* -------------------------------------------------------------------------- */
 /* -(  Primary API  )-------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
   /**
    * Upload a file to a B2 bucket, with a given name, and the specified data.
@@ -147,7 +141,9 @@ final class BackblazeB2 {
     self::jsonKeyIs($json, 'fileName', $file_name);
   }
 
+/* -------------------------------------------------------------------------- */
 /* -(  Utilities  )---------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
   /**
    * Get the file ID for a particular file
@@ -190,6 +186,10 @@ final class BackblazeB2 {
    * @task internal
    */
   private function getUploadUrl() {
+    // Before anything else, we need the ID.
+    $bucket_id = $this->getBucketId();
+
+    // Grab the needed token, URLs etc
     list($api_url, $token, $download_url) = $this->authorizeAccount();
     $full_url = $api_url.'/b2api/v1/b2_get_upload_url';
 
@@ -199,7 +199,7 @@ final class BackblazeB2 {
         'Authorization: '.$token,
       ),
       json_encode(array(
-        'bucketId' => $this->getBucketId(),
+        'bucketId' => $bucket_id,
       )));
 
     // Parse and get back a sane JSON value.
@@ -214,13 +214,54 @@ final class BackblazeB2 {
       ));
 
     // And, just to be sure: make sure we get the right bucket ID back.
-    self::jsonKeyIs($json, 'bucketId', $this->getBucketId());
+    self::jsonKeyIs($json, 'bucketId', $bucket_id);
 
     // Done: return the needed values
     return array(
       $json['uploadUrl'],
       $json['authorizationToken'],
     );
+  }
+
+  /**
+   * Return the Bucket ID for the specified bucket name.
+   *
+   * @task internal
+   */
+  private function getBucketId() {
+    list($api_url, $token, $download_url) = $this->authorizeAccount();
+    $full_url = $api_url.'/b2api/v1/b2_list_buckets';
+
+    // Execute
+    $response = self::execCurl(
+      $full_url, 'POST', array(
+        'Authorization: '.$token,
+      ),
+      json_encode(array(
+        'accountId' => $this->getAccountId(),
+      )));
+
+    // Parse and get back a sane JSON value.
+    $json = self::isValidJson($response);
+
+    // Now, check the JSON map has the buckets we asked for,
+    // and begin iterating to find the right bucket.
+    $wanted = $this->getBucketName();
+    self::jsonHasKeys($json, array('buckets'));
+
+    foreach ($json['buckets'] as $bucket) {
+      // Verify the keys for sanity, and look for a hit.
+      self::jsonHasKeys($bucket, array('bucketId', 'bucketName'));
+
+      if ($bucket['bucketName'] === $wanted) {
+        return $bucket['bucketId'];
+      }
+    }
+
+    // Otherwise, fail.
+    throw new Exception(
+      'Invalid bucket name! Could not locate a bucket ID for the '.
+      'given bucket "'.$wanted.'"');
   }
 
   /**
@@ -273,7 +314,9 @@ final class BackblazeB2 {
     return base64_encode($str);
   }
 
+/* -------------------------------------------------------------------------- */
 /* -(  Misc helpers  )------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
   /**
    * Ensures the input is valid JSON after decoding. Returns an associative
@@ -318,7 +361,9 @@ final class BackblazeB2 {
     }
   }
 
+/* -------------------------------------------------------------------------- */
 /* -(  cURL helpers  )------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
   /**
    * Execute a cURL request, abstracted to support the common needs for

@@ -40,14 +40,6 @@ final class PhabricatorBackblazeConfigOptions
         ->setSummary(pht('Bucket name for file storage.'))
         ->setDescription(
           pht('Set this to a valid B2 Bucket name to store files in.')),
-      $this->newOption('storage.b2.bucket-id', 'string', null)
-        ->setLocked(true)
-        ->setHidden(true)
-        ->setSummary(pht('Bucket id for file storage.'))
-        ->setDescription(
-          pht('Set this to a valid B2 Bucket ID to store the files in. '.
-              'Note that this ID must be the exact bucket name corresponding'.
-              'to the bucket named in `storage.b2.bucket-name`.')),
     );
   }
 }

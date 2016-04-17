@@ -9,14 +9,12 @@ $json = json_decode(file_get_contents('b2-example.json'), true);
 
 $app_key = $json['application-key'];
 $account_id = $json['account-id'];
-$bucket_id = $json['bucket-id'];
 $bucket_name = $json['bucket-name'];
 
 $b2 = new BackblazeB2();
 $b2->setApplicationKey($app_key);
 $b2->setAccountId($account_id);
 $b2->setBucketName($bucket_name);
-$b2->setBucketId($bucket_id);
 
 // -----------------------------
 // Run test

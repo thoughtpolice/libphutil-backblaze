@@ -9,7 +9,9 @@
 final class PhabricatorB2FileStorageEngine
   extends PhabricatorFileStorageEngine {
 
+/* -------------------------------------------------------------------------- */
 /* -(  Engine Metadata  )---------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
   /**
    * This engine identifies as `backblaze-b2`.
@@ -30,19 +32,19 @@ final class PhabricatorB2FileStorageEngine
    * Allow file writes
    */
   public function canWriteFiles() {
-    $bucket_id = PhabricatorEnv::getEnvConfig('storage.b2.bucket-id');
     $bucket_name = PhabricatorEnv::getEnvConfig('storage.b2.bucket-name');
     $account_id = PhabricatorEnv::getEnvConfig('backblaze-b2.account-id');
     $app_key = PhabricatorEnv::getEnvConfig('backblaze-b2.application-key');
 
-    return (strlen($bucket_id) &&
-            strlen($bucket_name) &&
+    return (strlen($bucket_name) &&
             strlen($account_id) &&
             strlen($app_key));
   }
 
 
+/* -------------------------------------------------------------------------- */
 /* -(  Managing File Data  )------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
   /**
    * Writes file data into Amazon S3.
@@ -89,13 +91,15 @@ final class PhabricatorB2FileStorageEngine
     $profiler = PhutilServiceProfiler::getInstance();
 
     // Perform the delete
-    $call_id = $this->startProfiledCall($profiler, 'deleteFileByName');
+    $call_id = $this->startProfiledCall($profiler, 'deleteFile');
     $b2->deleteFile($handle);
     $this->stopProfiledCall($profiler, $call_id);
   }
 
 
+/* -------------------------------------------------------------------------- */
 /* -(  Internals  )---------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
   /**
    * Generate a random filename to upload into the bucket.
@@ -125,20 +129,12 @@ final class PhabricatorB2FileStorageEngine
   }
 
   /**
-   * Retrieve the B2 bucket name and ID.
+   * Retrieve the B2 bucket name.
    *
    * @task internal
    */
   private function getBucket() {
-    $bucket_id = PhabricatorEnv::getEnvConfig('storage.b2.bucket-id');
     $bucket_name = PhabricatorEnv::getEnvConfig('storage.b2.bucket-name');
-
-    if (!$bucket_id) {
-      throw new PhabricatorFileStorageConfigurationException(
-        pht(
-          "No '%s' specified!",
-          'storage.b2.bucket-id'));
-    }
 
     if (!$bucket_name) {
       throw new PhabricatorFileStorageConfigurationException(
@@ -147,7 +143,7 @@ final class PhabricatorB2FileStorageEngine
           'storage.b2.bucket-name'));
     }
 
-    return array($bucket_id, $bucket_name);
+    return $bucket_name;
   }
 
   /**
@@ -159,15 +155,14 @@ final class PhabricatorB2FileStorageEngine
     $libroot = dirname(phutil_get_library_root('libphutil-backblaze'));
     require_once $libroot.'/externals/BackblazeB2.php';
 
-    list($bucket_id, $bucket_name) = $this->getBucket();
+    $bucket_name = $this->getBucket();
     $account_id = PhabricatorEnv::getEnvConfig('backblaze-b2.account-id');
     $app_key = PhabricatorEnv::getEnvConfig('backblaze-b2.application-key');
 
     return id(new BackblazeB2())
       ->setApplicationKey($app_key)
       ->setAccountId($account_id)
-      ->setBucketName($bucket_name)
-      ->setBucketId($bucket_id);
+      ->setBucketName($bucket_name);
   }
 
   /**
