@@ -12,4 +12,4 @@ $ $EDITOR b2-example.json # fill in your credentials
 $ php b2-example.php
 ```
 
-It should upload the `testing.txt` file, echo it, and delete it.
+It should upload a `testing.txt` file, echo it, and delete it.
